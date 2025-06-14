@@ -1,5 +1,7 @@
 <launch>
   <arg name="robot_ip" />
+  <arg name="robot_ip_1" />
+  <arg name="robot_ip_2" />
   <arg name="dof" />
   <arg name="robot_type" />
   <arg name="report_type" default="dev" />	
@@ -44,6 +46,7 @@
   <!-- joystick_type, 1: XBOX360_WIRED, 2: XBOX360_WIRELESS, 3: SPACEMOUSE_WIRELESS, 99: KEYBOARD -->
   <arg name="joystick_type" default="1" />
 
+  <!-- SINGLE ARM CONFIG TEST-->
   <include file="$(find uf_robot_moveit_config)/launch/_robot_moveit_realmove.launch">
     <arg name="dof" value="$(arg dof)" />
     <arg name="robot_type" value="$(arg robot_type)" />
@@ -87,6 +90,12 @@
 
   </include>
 
+  <!--DUALARM CONFIG TEST-->
+  <!--include file="$(find uf_robot_moveit_config)/launch/dual_uf850_moveit_realmove.launch">
+    <arg name="robot_ip_1" value="$(arg robot_ip_1)" />
+    <arg name="robot_ip_2" value="$(arg robot_ip_2)" />
+  </include-->
+
   <!-- joystick -->
   <node if="$(eval joystick_type != 99 + joystick_type != 3)" name="joy_node" pkg="joy" type="joy_node">
     <param name="default_trig_val" type="bool" value="true" />
@@ -122,4 +131,26 @@
     <param name="ros_queue_size" type="int" value="1" />
     <param name="joystick_type" type="int" value="$(arg joystick_type)" />
   </node>
+
+    <!-- robotiq gripper parameter-->
+  <!--arg name="sim" default="false"/>
+  <arg name="comport" default="/dev/ttyUSB0" unless="$(arg sim)"/> 
+  <arg name="baud" default="115200" unless="$(arg sim)"/--> 
+
+  <!-- Launch action server for robotiq gripper -->
+  <!--include file="$(find robotiq_2f_gripper_control)/launch/robotiq_action_server.launch">
+      <arg name="comport" value="$(arg comport)" unless="$(arg sim)"/>
+      <arg name="baud" value="$(arg baud)" unless="$(arg sim)"/>
+      <arg name="stroke" value="0.140"/>
+      <arg name="joint_name" value="finger_joint"/>
+      <arg name="verbose" value="true"/>
+      <arg name="sim" value="$(arg sim)"/>
+  </include-->
+
+  <!-- Launch space mouse controlled action client for robotiq gripper -->
+  <!--node pkg="robotiq_2f_gripper_control" type="robotiq_2f_action_client_space_mouse.py" 
+      name="robotiq_140_client" output="screen">
+      <param name="action_name" value="command_robotiq_action" />
+  </node-->
+
 </launch>

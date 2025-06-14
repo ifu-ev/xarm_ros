@@ -36,9 +36,9 @@ enum XBOX360_WIRELESS_CONTROLLER_AXIS
 {
     XBOX360_WIRELESS_LEFT_STICK_LR = 0,
     XBOX360_WIRELESS_LEFT_STICK_FB = 1,
-    XBOX360_WIRELESS_RIGHT_STICK_LR = 2,
-    XBOX360_WIRELESS_RIGHT_STICK_FB = 3,
-    XBOX360_WIRELESS_LEFT_TRIGGER = 4,
+    XBOX360_WIRELESS_RIGHT_STICK_LR = 3,
+    XBOX360_WIRELESS_RIGHT_STICK_FB = 4,
+    XBOX360_WIRELESS_LEFT_TRIGGER = 2,
     XBOX360_WIRELESS_RIGHT_TRIGGER = 5,
     XBOX360_WIRELESS_CROSS_KEY_LR = 6,
     XBOX360_WIRELESS_CROSS_KEY_FB = 7
@@ -61,11 +61,11 @@ enum XBOX360_CONTROLLER_BUTTON
 
 enum SPACEMOUSE_WIRELESS_AXIS
 {
-    SPM_STICK_Y = 0,
-    SPM_STICK_X = 1,
+    SPM_STICK_X = 0,
+    SPM_STICK_Y = 1,
     SPM_STICK_Z = 2,
-    SPM_STICK_PITCH = 3,
-    SPM_STICK_ROLL = 4,
+    SPM_STICK_ROLL = 3,
+    SPM_STICK_PITCH = 4,
     SPM_STICK_YAW = 5
 };
 
@@ -125,7 +125,7 @@ JoyToServoPub::JoyToServoPub(ros::NodeHandle& nh)
         ros::Duration(0.5).sleep();
     }
     while(ctrllers_num==0 || !all_controllers_running);
-
+    
     // Setup pub/sub
     joy_sub_ = nh_.subscribe(joy_topic_, ros_queue_size_, &JoyToServoPub::_joy_callback, this);
     twist_pub_ = nh_.advertise<geometry_msgs::TwistStamped>(cartesian_command_in_topic_, ros_queue_size_);
@@ -226,8 +226,11 @@ bool JoyToServoPub::_convert_xbox360_joy_to_cmd(
     twist->twist.linear.y = axes[left_stick_lr];
     twist->twist.linear.z = -1 * (axes[left_trigger] - axes[right_trigger]);
     twist->twist.angular.y = axes[right_stick_fb];
+    std::cout << "right_stick_fb: " << axes[right_stick_fb] << std::endl;
     twist->twist.angular.x = axes[right_stick_lr];
-    twist->twist.angular.z = buttons[XBOX360_BTN_LB] - buttons[XBOX360_BTN_RB];
+    std::cout << "right_stick_fb: " << axes[right_stick_lr] << std::endl;
+    std::cout << "XBOX360_BTN_LB: " << buttons[XBOX360_BTN_LB] << "    XBOX360_BTN_RB: " << buttons[XBOX360_BTN_RB] << std::endl;
+    twist->twist.angular.z = 2.0* (buttons[XBOX360_BTN_LB] - buttons[XBOX360_BTN_RB]);
 
     return true;
 }
@@ -238,10 +241,10 @@ bool JoyToServoPub::_convert_spacemouse_wireless_joy_to_cmd(const std::vector<fl
     twist->twist.linear.x = axes[SPM_STICK_X];
     twist->twist.linear.y = axes[SPM_STICK_Y];
     twist->twist.linear.z = axes[SPM_STICK_Z];
-    
+
     twist->twist.angular.x = axes[SPM_STICK_ROLL];
     twist->twist.angular.y = axes[SPM_STICK_PITCH];
-    twist->twist.angular.z = axes[SPM_STICK_YAW];
+    twist->twist.angular.z = 4.0 * axes[SPM_STICK_YAW];
 
     if (buttons[SPM_BTN_LEFT]) {
         twist->twist.angular.x = 0;
@@ -262,7 +265,7 @@ void JoyToServoPub::_joy_callback(const sensor_msgs::Joy::ConstPtr& msg)
     // Create the messages we might publish
     auto twist_msg = moveit::util::make_shared_from_pool<geometry_msgs::TwistStamped>();
     auto joint_msg = moveit::util::make_shared_from_pool<control_msgs::JointJog>();
-
+    std::cout << "Here 1" << std::endl; 
     if (dof_ == 7 && initialized_status_) {
         initialized_status_ -= 1;
         joint_msg->joint_names.push_back("joint1");
@@ -274,25 +277,35 @@ void JoyToServoPub::_joy_callback(const sensor_msgs::Joy::ConstPtr& msg)
 
         return;
     }
-
+    std::cout << "Here 2" << std::endl; 
     bool pub_twist = false;
 
     switch (joystick_type_) {
         case JOYSTICK_XBOX360_WIRED: // xbox360 wired
         case JOYSTICK_XBOX360_WIRELESS: // xbox360 wireless
-            if (msg->axes.size() != 8 || msg->buttons.size() != 11)
+            std::cout << "Checking axes and buttons size" << std::endl; 
+            std::cout << "Axes: " << msg->axes.size() << " | buttons: " << msg->buttons.size() << std::endl; 
+            if (msg->axes.size() != 8 || msg->buttons.size() != 15) {
+                std::cout << "Here 4" << std::endl; 
                 return;
+            }
+            std::cout << "befor converting" << std::endl; 
             pub_twist = _convert_xbox360_joy_to_cmd(msg->axes, msg->buttons, twist_msg, joint_msg);
             break;
         case JOYSTICK_SPACEMOUSE_WIRELESS: // spacemouse wireless
-            if (msg->axes.size() != 6 || msg->buttons.size() != 2)
+            if (msg->axes.size() != 6 || msg->buttons.size() != 2) {
+                std::cout << "Here 6" << std::endl; 
                 return;
+            }
             pub_twist = _convert_spacemouse_wireless_joy_to_cmd(msg->axes, msg->buttons, twist_msg);
             break;
         default:
+            std::cout << "Here 3" << std::endl; 
             return;
     }
+    std::cout << "Here 5" << std::endl;
     if (pub_twist) {
+        std::cout << "Publish twist" << std::endl;
         // filter and publish the TwistStamped
         // Tune the filter parameters "filter_coeff" and "zero_threshold" if needed!
         _filter_twist_msg(twist_msg, 0.5, 0.1);
@@ -302,6 +315,7 @@ void JoyToServoPub::_joy_callback(const sensor_msgs::Joy::ConstPtr& msg)
         twist_pub_.publish(std::move(twist_msg));
     }
     else {
+        std::cout << "Publish joint" << std::endl;
         // publish the JointJog
         joint_msg->header.stamp = ros::Time::now();
         joint_msg->header.frame_id = "joint";
