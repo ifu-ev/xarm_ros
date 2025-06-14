@@ -226,10 +226,7 @@ bool JoyToServoPub::_convert_xbox360_joy_to_cmd(
     twist->twist.linear.y = axes[left_stick_lr];
     twist->twist.linear.z = -1 * (axes[left_trigger] - axes[right_trigger]);
     twist->twist.angular.y = axes[right_stick_fb];
-    std::cout << "right_stick_fb: " << axes[right_stick_fb] << std::endl;
     twist->twist.angular.x = axes[right_stick_lr];
-    std::cout << "right_stick_fb: " << axes[right_stick_lr] << std::endl;
-    std::cout << "XBOX360_BTN_LB: " << buttons[XBOX360_BTN_LB] << "    XBOX360_BTN_RB: " << buttons[XBOX360_BTN_RB] << std::endl;
     twist->twist.angular.z = 2.0* (buttons[XBOX360_BTN_LB] - buttons[XBOX360_BTN_RB]);
 
     return true;
@@ -238,13 +235,13 @@ bool JoyToServoPub::_convert_xbox360_joy_to_cmd(
 bool JoyToServoPub::_convert_spacemouse_wireless_joy_to_cmd(const std::vector<float>& axes, const std::vector<int>& buttons,
     boost::shared_ptr<geometry_msgs::TwistStamped>& twist)
 {
-    twist->twist.linear.x = axes[SPM_STICK_X];
-    twist->twist.linear.y = axes[SPM_STICK_Y];
-    twist->twist.linear.z = axes[SPM_STICK_Z];
+    twist->twist.linear.x = 1.5 * axes[SPM_STICK_X]; // 2.0 * 
+    twist->twist.linear.y = 1.5 * axes[SPM_STICK_Y];
+    twist->twist.linear.z = 1.5 * axes[SPM_STICK_Z];
 
-    twist->twist.angular.x = axes[SPM_STICK_ROLL];
-    twist->twist.angular.y = axes[SPM_STICK_PITCH];
-    twist->twist.angular.z = 4.0 * axes[SPM_STICK_YAW];
+    twist->twist.angular.x = 1.5 * axes[SPM_STICK_ROLL];
+    twist->twist.angular.y = 1.5 * axes[SPM_STICK_PITCH];
+    twist->twist.angular.z = 4.0* axes[SPM_STICK_YAW];
 
     if (buttons[SPM_BTN_LEFT]) {
         twist->twist.angular.x = 0;
@@ -265,7 +262,7 @@ void JoyToServoPub::_joy_callback(const sensor_msgs::Joy::ConstPtr& msg)
     // Create the messages we might publish
     auto twist_msg = moveit::util::make_shared_from_pool<geometry_msgs::TwistStamped>();
     auto joint_msg = moveit::util::make_shared_from_pool<control_msgs::JointJog>();
-    std::cout << "Here 1" << std::endl; 
+    
     if (dof_ == 7 && initialized_status_) {
         initialized_status_ -= 1;
         joint_msg->joint_names.push_back("joint1");
@@ -277,35 +274,26 @@ void JoyToServoPub::_joy_callback(const sensor_msgs::Joy::ConstPtr& msg)
 
         return;
     }
-    std::cout << "Here 2" << std::endl; 
     bool pub_twist = false;
 
     switch (joystick_type_) {
         case JOYSTICK_XBOX360_WIRED: // xbox360 wired
         case JOYSTICK_XBOX360_WIRELESS: // xbox360 wireless
-            std::cout << "Checking axes and buttons size" << std::endl; 
-            std::cout << "Axes: " << msg->axes.size() << " | buttons: " << msg->buttons.size() << std::endl; 
             if (msg->axes.size() != 8 || msg->buttons.size() != 15) {
-                std::cout << "Here 4" << std::endl; 
                 return;
             }
-            std::cout << "befor converting" << std::endl; 
             pub_twist = _convert_xbox360_joy_to_cmd(msg->axes, msg->buttons, twist_msg, joint_msg);
             break;
         case JOYSTICK_SPACEMOUSE_WIRELESS: // spacemouse wireless
             if (msg->axes.size() != 6 || msg->buttons.size() != 2) {
-                std::cout << "Here 6" << std::endl; 
                 return;
             }
             pub_twist = _convert_spacemouse_wireless_joy_to_cmd(msg->axes, msg->buttons, twist_msg);
             break;
         default:
-            std::cout << "Here 3" << std::endl; 
             return;
     }
-    std::cout << "Here 5" << std::endl;
     if (pub_twist) {
-        std::cout << "Publish twist" << std::endl;
         // filter and publish the TwistStamped
         // Tune the filter parameters "filter_coeff" and "zero_threshold" if needed!
         _filter_twist_msg(twist_msg, 0.5, 0.1);
@@ -315,7 +303,6 @@ void JoyToServoPub::_joy_callback(const sensor_msgs::Joy::ConstPtr& msg)
         twist_pub_.publish(std::move(twist_msg));
     }
     else {
-        std::cout << "Publish joint" << std::endl;
         // publish the JointJog
         joint_msg->header.stamp = ros::Time::now();
         joint_msg->header.frame_id = "joint";

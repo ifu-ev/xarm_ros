@@ -133,24 +133,24 @@
   </node>
 
     <!-- robotiq gripper parameter-->
-  <!--arg name="sim" default="false"/>
+  <arg name="sim" default="false"/>
   <arg name="comport" default="/dev/ttyUSB0" unless="$(arg sim)"/> 
-  <arg name="baud" default="115200" unless="$(arg sim)"/--> 
+  <arg name="baud" default="115200" unless="$(arg sim)"/> 
 
   <!-- Launch action server for robotiq gripper -->
-  <!--include file="$(find robotiq_2f_gripper_control)/launch/robotiq_action_server.launch">
+  <include file="$(find robotiq_2f_gripper_control)/launch/robotiq_action_server.launch">
       <arg name="comport" value="$(arg comport)" unless="$(arg sim)"/>
       <arg name="baud" value="$(arg baud)" unless="$(arg sim)"/>
       <arg name="stroke" value="0.140"/>
       <arg name="joint_name" value="finger_joint"/>
       <arg name="verbose" value="true"/>
       <arg name="sim" value="$(arg sim)"/>
-  </include-->
+  </include>
 
   <!-- Launch space mouse controlled action client for robotiq gripper -->
-  <!--node pkg="robotiq_2f_gripper_control" type="robotiq_2f_action_client_space_mouse.py" 
+  <node pkg="robotiq_2f_gripper_control" type="robotiq_2f_action_client_space_mouse.py" 
       name="robotiq_140_client" output="screen">
       <param name="action_name" value="command_robotiq_action" />
-  </node-->
+  </node>
 
 </launch>
